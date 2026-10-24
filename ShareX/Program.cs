@@ -46,6 +46,15 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            string? currentTmp = Environment.GetEnvironmentVariable("TMPDIR");
+            if (string.IsNullOrEmpty(currentTmp) || currentTmp != "/tmp")
+            {
+                Environment.SetEnvironmentVariable("TMPDIR", "/tmp");
+            }
+        }
+
         ApplicationDiagnostics.Initialize();
         _startTimer = Stopwatch.StartNew();
         ApplicationCommandLine.Initialize(args);
@@ -71,6 +80,10 @@ internal static class Program
             {
                 singleInstanceManager.ArgumentsReceived += SingleInstanceCommandRouter.ArgumentsReceived;
                 Run(args);
+            }
+            else
+            {
+                Environment.Exit(0);
             }
         }
 

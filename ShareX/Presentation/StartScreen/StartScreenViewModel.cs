@@ -55,7 +55,7 @@ public sealed class StartScreenViewModel : INotifyPropertyChanged, IDisposable
     public string CaptureFeature => Strings.MainMenuBuilder_Capture;
     public string AutomateFeature => Strings.MainMenuBuilder_Workflows;
     public string ShareFeature => Strings.MainMenuBuilder_Tools;
-    public string PlatformNote => Strings.StartScreen_PlatformNote;
+    public string PlatformNote => OperatingSystem.IsWindows() ? Strings.StartScreen_PlatformNote : "Open source • Built for Linux";
     public string PersonalizeTitle => Strings.StartScreen_PersonalizeTitle;
     public string PersonalizeSubtitle => Strings.StartScreen_PersonalizeSubtitle;
     public string SettingsNote => Strings.StartScreen_SettingsNote;
@@ -183,9 +183,27 @@ public sealed class StartScreenViewModel : INotifyPropertyChanged, IDisposable
     public bool StartWithWindowsEnabled => _startWithWindowsEnabled;
     public string StartWithWindowsText => _startWithWindowsText;
 
+    private static string GetStartupLabel()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return Strings.ApplicationSettingsForm_cbStartWithWindows_Text;
+        }
+
+        string lang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return lang switch
+        {
+            "pt" => "Executar o ShareX ao iniciar o sistema",
+            "es" => "Ejecutar ShareX al iniciar el sistema",
+            "fr" => "Lancer ShareX au démarrage du système",
+            "de" => "ShareX beim Systemstart ausführen",
+            _ => "Run ShareX at system startup"
+        };
+    }
+
     private void RefreshStartWithWindows()
     {
-        _startWithWindowsText = Strings.ApplicationSettingsForm_cbStartWithWindows_Text;
+        _startWithWindowsText = GetStartupLabel();
         _startWithWindowsEnabled = false;
 
         try

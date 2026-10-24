@@ -361,11 +361,35 @@ namespace ShareX.AvaloniaUI.Windows
 
                 int centerX = startX + radius;
                 int centerY = startY + radius;
-                SKColor centerSkColor = (centerX >= 0 && centerX < _screenSnapshot.Width && centerY >= 0 && centerY < _screenSnapshot.Height)
-                    ? _screenSnapshot.GetPixel(centerX, centerY)
-                    : SKColors.Black;
 
-                color = Color.FromArgb(centerSkColor.Alpha, centerSkColor.Red, centerSkColor.Green, centerSkColor.Blue);
+                byte* srcBase = (byte*)_screenSnapshot.GetPixels().ToPointer();
+                int srcWidth = _screenSnapshot.Width;
+                int srcHeight = _screenSnapshot.Height;
+                int srcRowBytes = _screenSnapshot.RowBytes;
+                int bytesPerPixel = _screenSnapshot.BytesPerPixel;
+                bool isBgra = _screenSnapshot.ColorType == SKColorType.Bgra8888;
+
+                byte centerR = 0, centerG = 0, centerB = 0, centerA = 255;
+                if (srcBase != null && centerX >= 0 && centerX < srcWidth && centerY >= 0 && centerY < srcHeight)
+                {
+                    byte* p = srcBase + (centerY * srcRowBytes) + (centerX * bytesPerPixel);
+                    if (isBgra)
+                    {
+                        centerB = p[0];
+                        centerG = p[1];
+                        centerR = p[2];
+                        centerA = p[3];
+                    }
+                    else
+                    {
+                        centerR = p[0];
+                        centerG = p[1];
+                        centerB = p[2];
+                        centerA = p[3];
+                    }
+                }
+
+                color = Color.FromArgb(centerA, centerR, centerG, centerB);
 
                 using (ILockedFramebuffer framebuffer = bitmap.Lock())
                 {
@@ -380,14 +404,31 @@ namespace ShareX.AvaloniaUI.Windows
                         for (int dx = 0; dx < MagnifierPixelCount; dx++)
                         {
                             int srcX = startX + dx;
-                            SKColor pixel = (srcX >= 0 && srcX < _screenSnapshot.Width && srcY >= 0 && srcY < _screenSnapshot.Height)
-                                ? _screenSnapshot.GetPixel(srcX, srcY)
-                                : SKColors.Black;
+                            byte b = 0, g = 0, r = 0, a = 255;
 
-                            rowPtr[dx * 4 + 0] = pixel.Blue;
-                            rowPtr[dx * 4 + 1] = pixel.Green;
-                            rowPtr[dx * 4 + 2] = pixel.Red;
-                            rowPtr[dx * 4 + 3] = pixel.Alpha;
+                            if (srcBase != null && srcX >= 0 && srcX < srcWidth && srcY >= 0 && srcY < srcHeight)
+                            {
+                                byte* p = srcBase + (srcY * srcRowBytes) + (srcX * bytesPerPixel);
+                                if (isBgra)
+                                {
+                                    b = p[0];
+                                    g = p[1];
+                                    r = p[2];
+                                    a = p[3];
+                                }
+                                else
+                                {
+                                    r = p[0];
+                                    g = p[1];
+                                    b = p[2];
+                                    a = p[3];
+                                }
+                            }
+
+                            rowPtr[dx * 4 + 0] = b;
+                            rowPtr[dx * 4 + 1] = g;
+                            rowPtr[dx * 4 + 2] = r;
+                            rowPtr[dx * 4 + 3] = a;
                         }
                     }
                 }

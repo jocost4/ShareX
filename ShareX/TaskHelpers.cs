@@ -736,6 +736,11 @@ namespace ShareX
 
         public static void AddDefaultExternalPrograms(TaskSettings taskSettings)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return;
+            }
+
             if (taskSettings.ExternalPrograms == null)
             {
                 taskSettings.ExternalPrograms = new List<ExternalProgram>();

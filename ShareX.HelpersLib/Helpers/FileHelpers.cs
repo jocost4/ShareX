@@ -25,6 +25,7 @@
 
 using Microsoft.VisualBasic.FileIO;
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -39,11 +40,12 @@ namespace ShareX.HelpersLib
 {
     public static class FileHelpers
     {
-        public static readonly string[] ImageFileExtensions = new string[] { "jpg", "jpeg", "png", "gif", "bmp", "ico" };
-        public static readonly string[] TextFileExtensions = new string[] { "txt", "log", "nfo", "c", "cpp", "cc", "cxx", "h", "hpp", "hxx", "cs", "vb",
-            "html", "htm", "xhtml", "xht", "xml", "css", "js", "php", "bat", "java", "lua", "py", "pl", "cfg", "ini", "dart", "go", "gohtml" };
-        public static readonly string[] VideoFileExtensions = new string[] { "mp4", "webm", "mkv", "avi", "vob", "ogv", "ogg", "mov", "qt", "wmv", "m4p",
-            "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m2v", "m4v", "flv", "f4v" };
+        public static readonly FrozenSet<string> ImageFileExtensions = new[] { "jpg", "jpeg", "png", "gif", "bmp", "ico" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+        public static readonly FrozenSet<string> TextFileExtensions = new[] { "txt", "log", "nfo", "c", "cpp", "cc", "cxx", "h", "hpp", "hxx", "cs", "vb",
+            "html", "htm", "xhtml", "xht", "xml", "css", "js", "php", "bat", "java", "lua", "py", "pl", "cfg", "ini", "dart", "go", "gohtml" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+        public static readonly FrozenSet<string> VideoFileExtensions = new[] { "mp4", "webm", "mkv", "avi", "vob", "ogv", "ogg", "mov", "qt", "wmv", "m4p",
+            "m4v", "mpg", "mp2", "mpeg", "mpe", "mpv", "m2v", "m4v", "flv", "f4v" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+        private static readonly FrozenSet<string> MultiPartSecondaryExtensions = new[] { "tar" }.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
         public static string GetFileNameExtension(string filePath, bool includeDot = false, bool checkSecondExtension = true)
         {
@@ -64,13 +66,9 @@ namespace ShareX.HelpersLib
 
                         if (!string.IsNullOrEmpty(extension2))
                         {
-                            foreach (string knownExtension in new string[] { "tar" })
+                            if (MultiPartSecondaryExtensions.Contains(extension2))
                             {
-                                if (extension2.Equals(knownExtension, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    extension = extension2 + "." + extension;
-                                    break;
-                                }
+                                extension = extension2 + "." + extension;
                             }
                         }
                     }
@@ -158,10 +156,26 @@ namespace ShareX.HelpersLib
 
             if (!string.IsNullOrEmpty(ext))
             {
+                if (extensions is IReadOnlySet<string> readOnlySet)
+                {
+                    return readOnlySet.Contains(ext);
+                }
+
+                if (extensions is HashSet<string> hashSet)
+                {
+                    return hashSet.Contains(ext);
+                }
+
                 return extensions.Any(x => ext.Equals(x, StringComparison.OrdinalIgnoreCase));
             }
 
             return false;
+        }
+
+        public static bool CheckExtension(string filePath, IReadOnlySet<string> extensions)
+        {
+            string ext = GetFileNameExtension(filePath);
+            return !string.IsNullOrEmpty(ext) && extensions.Contains(ext);
         }
 
         public static bool IsImageFile(string filePath)
@@ -291,7 +305,7 @@ namespace ShareX.HelpersLib
         {
             if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
             {
-                if (!folderPath.EndsWith(@"\"))
+                if (OperatingSystem.IsWindows() && !folderPath.EndsWith(@"\"))
                 {
                     folderPath += @"\";
                 }

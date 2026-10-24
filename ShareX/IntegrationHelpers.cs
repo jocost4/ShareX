@@ -79,6 +79,7 @@ namespace ShareX
 
         public static bool CheckShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(ShellExtMenuFilesCmd, null, ShellExtPath) &&
@@ -94,6 +95,7 @@ namespace ShareX
 
         public static void CreateShellContextMenuButton(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -114,6 +116,7 @@ namespace ShareX
 
         private static void RegisterShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(ShellExtMenuFiles, ShellExtDesc);
             RegistryHelpers.CreateRegistry(ShellExtMenuFiles, "Icon", ShellExtIcon);
             RegistryHelpers.CreateRegistry(ShellExtMenuFilesCmd, ShellExtPath);
@@ -125,12 +128,14 @@ namespace ShareX
 
         private static void UnregisterShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(ShellExtMenuFiles);
             RegistryHelpers.RemoveRegistry(ShellExtMenuDirectory);
         }
 
         public static bool CheckEditShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(ShellExtEditImageCmd, null, ShellExtEditPath);
@@ -145,6 +150,7 @@ namespace ShareX
 
         public static void CreateEditShellContextMenuButton(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -165,6 +171,7 @@ namespace ShareX
 
         private static void RegisterEditShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(ShellExtEditImage, ShellExtEditDesc);
             RegistryHelpers.CreateRegistry(ShellExtEditImage, "Icon", ShellExtEditIcon);
             RegistryHelpers.CreateRegistry(ShellExtEditImageCmd, ShellExtEditPath);
@@ -172,11 +179,13 @@ namespace ShareX
 
         private static void UnregisterEditShellContextMenuButton()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(ShellExtEditImage);
         }
 
         public static bool CheckCustomUploaderExtension()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(ShellCustomUploaderExtensionPath, null, ShellCustomUploaderExtensionValue) &&
@@ -192,6 +201,7 @@ namespace ShareX
 
         public static void CreateCustomUploaderExtension(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -212,6 +222,7 @@ namespace ShareX
 
         private static void RegisterCustomUploaderExtension()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(ShellCustomUploaderExtensionPath, ShellCustomUploaderExtensionValue);
             RegistryHelpers.CreateRegistry(ShellCustomUploaderAssociatePath, ShellCustomUploaderAssociateValue);
             RegistryHelpers.CreateRegistry(ShellCustomUploaderIconPath, ShellCustomUploaderIconValue);
@@ -222,12 +233,14 @@ namespace ShareX
 
         private static void UnregisterCustomUploaderExtension()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(ShellCustomUploaderExtensionPath);
             RegistryHelpers.RemoveRegistry(ShellCustomUploaderAssociatePath);
         }
 
         public static bool CheckImageEffectExtension()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(ShellImageEffectExtensionPath, null, ShellImageEffectExtensionValue) &&
@@ -243,6 +256,7 @@ namespace ShareX
 
         public static void CreateImageEffectExtension(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -263,6 +277,7 @@ namespace ShareX
 
         private static void RegisterImageEffectExtension()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(ShellImageEffectExtensionPath, ShellImageEffectExtensionValue);
             RegistryHelpers.CreateRegistry(ShellImageEffectAssociatePath, ShellImageEffectAssociateValue);
             RegistryHelpers.CreateRegistry(ShellImageEffectIconPath, ShellImageEffectIconValue);
@@ -273,12 +288,14 @@ namespace ShareX
 
         private static void UnregisterImageEffectExtension()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(ShellImageEffectExtensionPath);
             RegistryHelpers.RemoveRegistry(ShellImageEffectAssociatePath);
         }
 
         public static bool CheckChromeExtensionSupport()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(ChromeNativeMessagingHosts, null, ChromeHostManifestFilePath) && File.Exists(ChromeHostManifestFilePath);
@@ -293,6 +310,7 @@ namespace ShareX
 
         public static void CreateChromeExtensionSupport(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -313,16 +331,19 @@ namespace ShareX
 
         private static void RegisterChromeExtensionSupport()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(ChromeNativeMessagingHosts, ChromeHostManifestFilePath);
         }
 
         private static void UnregisterChromeExtensionSupport()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(ChromeNativeMessagingHosts);
         }
 
         public static bool CheckFirefoxAddonSupport()
         {
+            if (!OperatingSystem.IsWindows()) return false;
             try
             {
                 return RegistryHelpers.CheckStringValue(FirefoxNativeMessagingHosts, null, FirefoxHostManifestFilePath) && File.Exists(FirefoxHostManifestFilePath);
@@ -337,6 +358,7 @@ namespace ShareX
 
         public static void CreateFirefoxAddonSupport(bool create)
         {
+            if (!OperatingSystem.IsWindows()) return;
             try
             {
                 if (create)
@@ -357,11 +379,13 @@ namespace ShareX
 
         private static void RegisterFirefoxAddonSupport()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.CreateRegistry(FirefoxNativeMessagingHosts, FirefoxHostManifestFilePath);
         }
 
         private static void UnregisterFirefoxAddonSupport()
         {
+            if (!OperatingSystem.IsWindows()) return;
             RegistryHelpers.RemoveRegistry(FirefoxNativeMessagingHosts);
         }
 

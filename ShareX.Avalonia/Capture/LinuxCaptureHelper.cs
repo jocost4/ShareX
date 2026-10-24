@@ -6,6 +6,7 @@
 #endregion License Information (GPL v3)
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -24,7 +25,7 @@ public static class LinuxCaptureHelper
     {
         lock (_syncLock)
         {
-            string? filePath = CaptureViaPortal();
+            string? filePath = CaptureViaPortal(interactive: false);
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
                 try
@@ -35,6 +36,27 @@ public static class LinuxCaptureHelper
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Failed to load portal screenshot: {ex}");
+                }
+            }
+            return null;
+        }
+    }
+
+    public static SKBitmap? CaptureInteractiveWindow()
+    {
+        lock (_syncLock)
+        {
+            string? filePath = CaptureViaPortal(interactive: true);
+            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+            {
+                try
+                {
+                    using FileStream stream = File.OpenRead(filePath);
+                    return SKBitmap.Decode(stream);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to load interactive portal screenshot: {ex}");
                 }
             }
             return null;
@@ -53,13 +75,14 @@ public static class LinuxCaptureHelper
 
         try
         {
-            SKBitmap cropped = new SKBitmap(intersect.Width, intersect.Height);
-            using (SKCanvas canvas = new SKCanvas(cropped))
+            SKBitmap cropped = new SKBitmap();
+            SKRectI subset = new SKRectI(intersect.Left, intersect.Top, intersect.Right, intersect.Bottom);
+            if (full.ExtractSubset(cropped, subset))
             {
-                canvas.DrawBitmap(full, -intersect.X, -intersect.Y);
+                full.Dispose();
+                return cropped;
             }
-            full.Dispose();
-            return cropped;
+            cropped.Dispose();
         }
         catch (Exception ex)
         {
@@ -69,15 +92,100 @@ public static class LinuxCaptureHelper
         return full;
     }
 
-    private static string? CaptureViaPortal()
+    private static IEnumerable<string> GetPicturesDirectories()
+    {
+        HashSet<string> dirs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            string myPictures = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+            if (!string.IsNullOrEmpty(myPictures) && Directory.Exists(myPictures))
+            {
+                dirs.Add(myPictures);
+            }
+        }
+        catch { }
+
+        try
+        {
+            string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            if (!string.IsNullOrEmpty(userProfile))
+            {
+                string[] candidates = new[]
+                {
+                    Path.Combine(userProfile, "Imagens"),
+                    Path.Combine(userProfile, "Pictures"),
+                    Path.Combine(userProfile, "Imagens", "Capturas de tela"),
+                    Path.Combine(userProfile, "Pictures", "Screenshots")
+                };
+
+                foreach (string candidate in candidates)
+                {
+                    if (Directory.Exists(candidate))
+                    {
+                        dirs.Add(candidate);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        try
+        {
+            using Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("xdg-user-dir", "PICTURES")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            proc.Start();
+            string? outDir = proc.StandardOutput.ReadToEnd()?.Trim();
+            proc.WaitForExit(1000);
+            if (!string.IsNullOrEmpty(outDir) && Directory.Exists(outDir))
+            {
+                dirs.Add(outDir);
+            }
+        }
+        catch { }
+
+        return dirs;
+    }
+
+    private static string? CaptureViaPortal(bool interactive = false)
     {
         Process? monitor = null;
+        List<FileSystemWatcher> watchers = new();
         try
         {
             DateTime startTime = DateTime.UtcNow;
             string? foundPath = null;
             using AutoResetEvent waitHandle = new AutoResetEvent(false);
-            Regex uriRegex = new Regex("file://([^\\s\"']+)");
+            Regex uriRegex = new Regex(@"file://([^\s""'<>()]+)");
+
+            foreach (string dir in GetPicturesDirectories())
+            {
+                try
+                {
+                    FileSystemWatcher fsw = new FileSystemWatcher(dir, "*.png")
+                    {
+                        IncludeSubdirectories = true,
+                        EnableRaisingEvents = true
+                    };
+                    fsw.Created += (s, e) =>
+                    {
+                        foundPath = e.FullPath;
+                        waitHandle.Set();
+                    };
+                    fsw.Changed += (s, e) =>
+                    {
+                        foundPath = e.FullPath;
+                        waitHandle.Set();
+                    };
+                    watchers.Add(fsw);
+                }
+                catch { }
+            }
 
             monitor = new Process();
             monitor.StartInfo = new ProcessStartInfo("stdbuf", "-oL busctl --user monitor org.freedesktop.portal.Desktop")
@@ -103,7 +211,8 @@ public static class LinuxCaptureHelper
 
             using (Process caller = new Process())
             {
-                caller.StartInfo = new ProcessStartInfo("gdbus", "call --session --dest org.freedesktop.portal.Desktop --object-path /org/freedesktop/portal/desktop --method org.freedesktop.portal.Screenshot.Screenshot \"\" \"{'interactive': <false>}\"")
+                string interactiveArg = interactive ? "<true>" : "<false>";
+                caller.StartInfo = new ProcessStartInfo("gdbus", $"call --session --dest org.freedesktop.portal.Desktop --object-path /org/freedesktop/portal/desktop --method org.freedesktop.portal.Screenshot.Screenshot \"\" \"{{'interactive': {interactiveArg}}}\"")
                 {
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
@@ -111,24 +220,43 @@ public static class LinuxCaptureHelper
                     CreateNoWindow = true
                 };
                 caller.Start();
-                caller.WaitForExit(3000);
+                caller.WaitForExit(5000);
             }
 
-            waitHandle.WaitOne(2000);
+            int timeoutMs = interactive ? 60000 : 3000;
+            waitHandle.WaitOne(timeoutMs);
 
-            try { monitor.Kill(); } catch { }
-            monitor.Dispose();
-            monitor = null;
+            foreach (var w in watchers)
+            {
+                try { w.EnableRaisingEvents = false; w.Dispose(); } catch { }
+            }
+            watchers.Clear();
+
+            if (monitor != null)
+            {
+                try { monitor.Kill(); } catch { }
+                monitor.Dispose();
+                monitor = null;
+            }
 
             if (!string.IsNullOrEmpty(foundPath) && File.Exists(foundPath))
             {
+                for (int i = 0; i < 10; i++)
+                {
+                    try
+                    {
+                        using var fs = File.OpenRead(foundPath);
+                        if (fs.Length > 0) return foundPath;
+                    }
+                    catch { }
+                    Thread.Sleep(50);
+                }
                 return foundPath;
             }
 
-            string picturesDir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
-            if (!string.IsNullOrEmpty(picturesDir) && Directory.Exists(picturesDir))
+            foreach (string dir in GetPicturesDirectories())
             {
-                var latestFile = Directory.GetFiles(picturesDir, "*.png", SearchOption.AllDirectories)
+                var latestFile = Directory.GetFiles(dir, "*.png", SearchOption.AllDirectories)
                     .Select(f => new FileInfo(f))
                     .Where(fi => fi.LastWriteTimeUtc >= startTime.AddSeconds(-2))
                     .OrderByDescending(fi => fi.LastWriteTimeUtc)
@@ -146,6 +274,11 @@ public static class LinuxCaptureHelper
         }
         finally
         {
+            foreach (var w in watchers)
+            {
+                try { w.EnableRaisingEvents = false; w.Dispose(); } catch { }
+            }
+            watchers.Clear();
             if (monitor != null)
             {
                 try { monitor.Kill(); } catch { }

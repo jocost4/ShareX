@@ -67,12 +67,15 @@ namespace ShareX.ScreenCaptureLib
         {
             if (!OperatingSystem.IsWindows())
             {
-                var win = new WindowsList().GetVisibleWindowsList().FirstOrDefault(w => w.Handle == handle);
-                if (win != null && win.Rectangle.Width > 0 && win.Rectangle.Height > 0)
+                if (handle != IntPtr.Zero)
                 {
-                    return LinuxCaptureHelper.CaptureRectangle(win.Rectangle);
+                    var win = new WindowsList().GetVisibleWindowsList().FirstOrDefault(w => w.Handle == handle);
+                    if (win != null && win.Rectangle.Width > 0 && win.Rectangle.Height > 0)
+                    {
+                        return LinuxCaptureHelper.CaptureRectangle(win.Rectangle);
+                    }
                 }
-                return LinuxCaptureHelper.CaptureFullscreen();
+                return LinuxCaptureHelper.CaptureInteractiveWindow();
             }
 
             if (handle.ToInt32() > 0)
@@ -116,8 +119,11 @@ namespace ShareX.ScreenCaptureLib
             if (!OperatingSystem.IsWindows())
             {
                 var win = new WindowsList().GetVisibleWindowsList().FirstOrDefault();
-                if (win != null) return CaptureWindow(win.Handle);
-                return CaptureFullscreen();
+                if (win != null && win.Handle != IntPtr.Zero && win.Rectangle.Width > 0 && win.Rectangle.Height > 0)
+                {
+                    return CaptureWindow(win.Handle);
+                }
+                return LinuxCaptureHelper.CaptureInteractiveWindow();
             }
 
             IntPtr handle = NativeMethods.GetForegroundWindow();

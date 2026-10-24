@@ -74,7 +74,7 @@ internal static class ApplicationCommandLine
 
         if (args.Length == 0)
         {
-            if (ApplicationState.Settings.ShowTray)
+            if (OperatingSystem.IsWindows() && ApplicationState.Settings.ShowTray)
             {
                 // Workaround for Windows startup tray icon bug.
                 MainWindowIntegration.SetTrayVisible(false);

@@ -57,13 +57,23 @@ internal sealed class DesktopTrayIconService : ITrayIconService
 
     public bool Visible
     {
-        get => _windowsIcon?.Visible ?? _avaloniaIcon!.IsVisible;
-        set { if (_windowsIcon != null) _windowsIcon.Visible = value; else _avaloniaIcon!.IsVisible = value; }
+        get => _windowsIcon?.Visible ?? _avaloniaIcon?.IsVisible ?? false;
+        set
+        {
+            if (_disposed) return;
+            if (_windowsIcon != null) _windowsIcon.Visible = value;
+            else if (_avaloniaIcon != null && _avaloniaIcon.IsVisible != value) _avaloniaIcon.IsVisible = value;
+        }
     }
     public string ToolTipText
     {
-        get => _windowsIcon?.ToolTipText ?? _avaloniaIcon!.ToolTipText ?? string.Empty;
-        set { if (_windowsIcon != null) _windowsIcon.ToolTipText = value; else _avaloniaIcon!.ToolTipText = value; }
+        get => _windowsIcon?.ToolTipText ?? _avaloniaIcon?.ToolTipText ?? string.Empty;
+        set
+        {
+            if (_disposed) return;
+            if (_windowsIcon != null) _windowsIcon.ToolTipText = value;
+            else if (_avaloniaIcon != null && _avaloniaIcon.ToolTipText != value) _avaloniaIcon.ToolTipText = value;
+        }
     }
 
     public DesktopTrayIconService(IHotkeyHost host, byte[] icon, string text, bool visible)
@@ -95,11 +105,12 @@ internal sealed class DesktopTrayIconService : ITrayIconService
 
     public void SetIcon(byte[] bytes)
     {
+        if (_disposed) return;
         if (_windowsIcon != null) _windowsIcon.SetIcon(bytes);
-        else
+        else if (_avaloniaIcon != null)
         {
             using MemoryStream stream = new(bytes, writable: false);
-            _avaloniaIcon!.Icon = new Avalonia.Controls.WindowIcon(stream);
+            _avaloniaIcon.Icon = new Avalonia.Controls.WindowIcon(stream);
         }
     }
 

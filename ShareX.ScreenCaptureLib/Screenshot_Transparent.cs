@@ -37,6 +37,11 @@ namespace ShareX.ScreenCaptureLib
     {
         public Bitmap CaptureWindowTransparent(IntPtr handle)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return CaptureWindow(handle);
+            }
+
             if (handle != IntPtr.Zero)
             {
                 Rectangle rect = CaptureHelpers.GetWindowRectangle(handle);
@@ -149,6 +154,11 @@ namespace ShareX.ScreenCaptureLib
 
         public Bitmap CaptureActiveWindowTransparent()
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return CaptureActiveWindow();
+            }
+
             IntPtr handle = NativeMethods.GetForegroundWindow();
 
             return CaptureWindowTransparent(handle);

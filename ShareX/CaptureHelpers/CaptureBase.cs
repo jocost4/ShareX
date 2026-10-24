@@ -90,7 +90,7 @@ namespace ShareX
                 wait = true;
             }
 
-            if (autoHideForm && AllowAutoHideForm)
+            if (autoHideForm && AllowAutoHideForm && MainWindowIntegration.IsVisible)
             {
                 MainWindowIntegration.Hide();
                 showMainForm = true;
