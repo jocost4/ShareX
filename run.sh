@@ -17,6 +17,10 @@ fi
 
 TARGET_DLL=""
 for candidate in \
+    "$DIR/ShareX/bin/Debug/ShareX.dll" \
+    "$DIR/source/ShareX/bin/Debug/ShareX.dll" \
+    "$DIR/ShareX/bin/Release/ShareX.dll" \
+    "$DIR/source/ShareX/bin/Release/ShareX.dll" \
     "$DIR/ShareX/bin/Debug/net10.0/ShareX.dll" \
     "$DIR/source/ShareX/bin/Debug/net10.0/ShareX.dll" \
     "$DIR/ShareX/bin/Release/net10.0/ShareX.dll" \
