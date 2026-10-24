@@ -32,6 +32,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using ShareX.AvaloniaUI.Input;
 using ShareX.AvaloniaUI.Theming;
+using ShareX.ScreenCaptureLib;
+using SkiaSharp;
 using System.Runtime.InteropServices;
 
 namespace ShareX.AvaloniaUI.Windows
@@ -47,6 +49,8 @@ namespace ShareX.AvaloniaUI.Windows
 
         private readonly ScreenColorPickerOptions _options;
         private readonly TaskCompletionSource<ScreenColorPickerResult?> _completionSource = new();
+        private SKBitmap? _screenSnapshot;
+        private PixelPoint _screenOffset = PixelPoint.Origin;
         private Border _pickerPreview = null!;
         private Border _colorPreview = null!;
         private Grid _magnifierPanel = null!;
@@ -99,6 +103,11 @@ namespace ShareX.AvaloniaUI.Windows
         {
             ConfigureOverlayBounds();
 
+            if (!OperatingSystem.IsWindows())
+            {
+                _screenSnapshot = LinuxCaptureHelper.CaptureFullscreen();
+            }
+
             if (owner != null)
             {
                 Show(owner);
@@ -115,24 +124,30 @@ namespace ShareX.AvaloniaUI.Windows
         {
             _completionSource.TrySetResult(null);
             DisposeMagnifierCapture();
+            _screenSnapshot?.Dispose();
+            _screenSnapshot = null;
             base.OnClosed(e);
         }
 
         private void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (!OperatingSystem.IsWindows())
-            {
-                Complete(null);
-                return;
-            }
-
             Activate();
             Focus();
 
-            if (GetCursorPos(out NativePoint cursorPosition))
+            if (OperatingSystem.IsWindows())
             {
-                var screenPoint = new PixelPoint(cursorPosition.X, cursorPosition.Y);
-                UpdatePicker(screenPoint, this.PointToClient(screenPoint));
+                if (GetCursorPos(out NativePoint cursorPosition))
+                {
+                    var screenPoint = new PixelPoint(cursorPosition.X, cursorPosition.Y);
+                    UpdatePicker(screenPoint, this.PointToClient(screenPoint));
+                }
+            }
+            else
+            {
+                if (_screenSnapshot == null)
+                {
+                    _screenSnapshot = LinuxCaptureHelper.CaptureFullscreen();
+                }
             }
         }
 
@@ -213,6 +228,7 @@ namespace ShareX.AvaloniaUI.Windows
             int right = screens.Max(screen => screen.Bounds.X + screen.Bounds.Width);
             int bottom = screens.Max(screen => screen.Bounds.Y + screen.Bounds.Height);
             var topLeft = new PixelPoint(left, top);
+            _screenOffset = topLeft;
             double scaling = Screens.ScreenFromPoint(topLeft)?.Scaling ?? screens[0].Scaling;
 
             Position = topLeft;
@@ -320,6 +336,65 @@ namespace ShareX.AvaloniaUI.Windows
 
         private unsafe bool TryUpdateMagnifier(PixelPoint center, WriteableBitmap bitmap, out Color color)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                if (_screenSnapshot == null)
+                {
+                    color = default;
+                    return false;
+                }
+
+                int radius = MagnifierPixelCount / 2;
+                int startX = center.X - radius;
+                int startY = center.Y - radius;
+
+                if (startX < 0 || startY < 0 || startX + MagnifierPixelCount > _screenSnapshot.Width || startY + MagnifierPixelCount > _screenSnapshot.Height)
+                {
+                    if (startX - _screenOffset.X >= 0 && startY - _screenOffset.Y >= 0 &&
+                        startX - _screenOffset.X + MagnifierPixelCount <= _screenSnapshot.Width &&
+                        startY - _screenOffset.Y + MagnifierPixelCount <= _screenSnapshot.Height)
+                    {
+                        startX -= _screenOffset.X;
+                        startY -= _screenOffset.Y;
+                    }
+                }
+
+                int centerX = startX + radius;
+                int centerY = startY + radius;
+                SKColor centerSkColor = (centerX >= 0 && centerX < _screenSnapshot.Width && centerY >= 0 && centerY < _screenSnapshot.Height)
+                    ? _screenSnapshot.GetPixel(centerX, centerY)
+                    : SKColors.Black;
+
+                color = Color.FromArgb(centerSkColor.Alpha, centerSkColor.Red, centerSkColor.Green, centerSkColor.Blue);
+
+                using (ILockedFramebuffer framebuffer = bitmap.Lock())
+                {
+                    int destStride = framebuffer.RowBytes;
+                    byte* destPtr = (byte*)framebuffer.Address;
+
+                    for (int dy = 0; dy < MagnifierPixelCount; dy++)
+                    {
+                        int srcY = startY + dy;
+                        byte* rowPtr = destPtr + (dy * destStride);
+
+                        for (int dx = 0; dx < MagnifierPixelCount; dx++)
+                        {
+                            int srcX = startX + dx;
+                            SKColor pixel = (srcX >= 0 && srcX < _screenSnapshot.Width && srcY >= 0 && srcY < _screenSnapshot.Height)
+                                ? _screenSnapshot.GetPixel(srcX, srcY)
+                                : SKColors.Black;
+
+                            rowPtr[dx * 4 + 0] = pixel.Blue;
+                            rowPtr[dx * 4 + 1] = pixel.Green;
+                            rowPtr[dx * 4 + 2] = pixel.Red;
+                            rowPtr[dx * 4 + 3] = pixel.Alpha;
+                        }
+                    }
+                }
+
+                return true;
+            }
+
             if (_magnifierDc == nint.Zero || _magnifierDib == nint.Zero || _magnifierBits == nint.Zero)
             {
                 color = default;
@@ -388,8 +463,32 @@ namespace ShareX.AvaloniaUI.Windows
             }
         }
 
-        private static bool TryGetScreenColor(PixelPoint point, out Color color)
+        private bool TryGetScreenColor(PixelPoint point, out Color color)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                if (_screenSnapshot != null)
+                {
+                    int x = point.X;
+                    int y = point.Y;
+                    if (x < 0 || y < 0 || x >= _screenSnapshot.Width || y >= _screenSnapshot.Height)
+                    {
+                        x -= _screenOffset.X;
+                        y -= _screenOffset.Y;
+                    }
+
+                    if (x >= 0 && x < _screenSnapshot.Width && y >= 0 && y < _screenSnapshot.Height)
+                    {
+                        SKColor pixel = _screenSnapshot.GetPixel(x, y);
+                        color = Color.FromArgb(pixel.Alpha, pixel.Red, pixel.Green, pixel.Blue);
+                        return true;
+                    }
+                }
+
+                color = default;
+                return false;
+            }
+
             nint screenDc = GetDC(nint.Zero);
 
             if (screenDc == nint.Zero)

@@ -164,6 +164,11 @@ namespace ShareX
         {
             TaskMetadata metadata = new TaskMetadata();
 
+            if (!OperatingSystem.IsWindows())
+            {
+                return metadata;
+            }
+
             IntPtr handle = NativeMethods.GetForegroundWindow();
             WindowInfo windowInfo = new WindowInfo(handle);
 

@@ -44,6 +44,8 @@ internal static class ApplicationCommandLine
         StartupOptions.AutoClose = _initial.IsCommandExist("AutoClose");
     }
 
+    internal static bool HasCommands => Initial.Commands.Count > 0;
+
     internal static bool IsCommandPresent(params string[] commands) => Initial.IsCommandExist(commands);
 
     internal static bool TryHandleUninstall()

@@ -888,7 +888,15 @@ public partial class RegionCaptureWindow : Window
 
         double scale = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
         double monitorCenterX = screen.Bounds.X - _request.ScreenBounds.X + screen.Bounds.Width / 2d;
-        double monitorTop = screen.Bounds.Y - _request.ScreenBounds.Y;
+
+        // Position toolbar below system top bars (e.g. GNOME Shell / Ubuntu top panel)
+        double topOffset = Math.Max(screen.WorkingArea.Y, screen.Bounds.Y);
+        if (OperatingSystem.IsLinux() && topOffset <= screen.Bounds.Y)
+        {
+            topOffset = screen.Bounds.Y + 32;
+        }
+        double monitorTop = topOffset - _request.ScreenBounds.Y;
+
         _captureToolbarCenterX = monitorCenterX / scale;
         _captureToolbarTop = monitorTop / scale;
         _positionedCaptureToolbarWidth = double.NaN;

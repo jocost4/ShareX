@@ -47,6 +47,34 @@ namespace ShareX
 #if STEAM
                 return FileHelpers.GetAbsolutePath("../ShareX_Launcher.exe");
 #else
+                if (!OperatingSystem.IsWindows())
+                {
+                    string dir = AppContext.BaseDirectory;
+                    while (!string.IsNullOrEmpty(dir))
+                    {
+                        string runScript = System.IO.Path.Combine(dir, "run.sh");
+                        if (System.IO.File.Exists(runScript))
+                        {
+                            return runScript;
+                        }
+                        System.IO.DirectoryInfo parent = System.IO.Directory.GetParent(dir);
+                        dir = parent?.FullName;
+                    }
+
+                    string processPath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(processPath) && System.IO.Path.GetFileNameWithoutExtension(processPath).Equals("dotnet", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string entryDll = typeof(StartupManager).Assembly.Location;
+                        if (string.IsNullOrEmpty(entryDll) || !System.IO.File.Exists(entryDll))
+                        {
+                            entryDll = System.IO.Path.Combine(AppContext.BaseDirectory, "ShareX.dll");
+                        }
+                        if (System.IO.File.Exists(entryDll))
+                        {
+                            return entryDll;
+                        }
+                    }
+                }
                 return Environment.ProcessPath;
 #endif
             }
@@ -59,22 +87,31 @@ namespace ShareX
 #if MicrosoftStore
                 return (StartupState)packageTask.State;
 #else
-                if (ShortcutHelpers.CheckShortcut(Environment.SpecialFolder.Startup, "ShareX", StartupTargetPath))
+                if (OperatingSystem.IsWindows())
                 {
-                    if (Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder",
-                        "ShareX.lnk", null) is byte[] status && status.Length > 0 && status[0] == 3)
+                    if (ShortcutHelpers.CheckShortcut(Environment.SpecialFolder.Startup, "ShareX", StartupTargetPath))
                     {
-                        return StartupState.DisabledByUser;
-                    }
-                    else
-                    {
-                        return StartupState.Enabled;
+                        if (Registry.GetValue(@"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\StartupFolder",
+                            "ShareX.lnk", null) is byte[] status && status.Length > 0 && status[0] == 3)
+                        {
+                            return StartupState.DisabledByUser;
+                        }
+                        else
+                        {
+                            return StartupState.Enabled;
+                        }
                     }
                 }
                 else
                 {
-                    return StartupState.Disabled;
+                    string autostartDesktop = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "autostart", "ShareX.desktop");
+                    if (System.IO.File.Exists(autostartDesktop) || ShortcutHelpers.CheckShortcut(Environment.SpecialFolder.Startup, "ShareX", StartupTargetPath))
+                    {
+                        return StartupState.Enabled;
+                    }
                 }
+
+                return StartupState.Disabled;
 #endif
             }
             set

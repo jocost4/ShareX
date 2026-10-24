@@ -84,6 +84,7 @@ internal sealed class DesktopTrayIconService : ITrayIconService
         {
             _avaloniaIcon = new Avalonia.Controls.TrayIcon { Menu = new Avalonia.Controls.NativeMenu(), IsVisible = false };
             _avaloniaIcon.Clicked += OnAvaloniaClick;
+            BuildNativeMenu(_avaloniaIcon.Menu, new MainMenuBuilder(true).BuildTrayMenu());
             _avaloniaIcon.Menu.Opening += (_, _) => BuildNativeMenu(_avaloniaIcon.Menu, new MainMenuBuilder(true).BuildTrayMenu());
         }
         ToolTipText = text;
@@ -164,12 +165,13 @@ internal sealed class DesktopTrayIconService : ITrayIconService
             if (entry.CreateChildren != null)
             {
                 item.Menu = new Avalonia.Controls.NativeMenu();
+                BuildNativeMenu(item.Menu, entry.CreateChildren());
                 item.Menu.Opening += (_, _) => BuildNativeMenu(item.Menu, entry.CreateChildren());
             }
             else if (entry.CreateCategories != null)
             {
                 item.Menu = new Avalonia.Controls.NativeMenu();
-                item.Menu.Opening += (_, _) =>
+                Action populateCategories = () =>
                 {
                     item.Menu.Items.Clear();
                     foreach (MainMenuCategory category in entry.CreateCategories())
@@ -179,6 +181,8 @@ internal sealed class DesktopTrayIconService : ITrayIconService
                         item.Menu.Items.Add(categoryItem);
                     }
                 };
+                populateCategories();
+                item.Menu.Opening += (_, _) => populateCategories();
             }
             else item.Click += async (_, _) => { if (entry.ExecuteAsync != null) await entry.ExecuteAsync(); };
             menu.Items.Add(item);

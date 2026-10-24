@@ -686,6 +686,11 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
     private void ApplyToolWindowStyle()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         IntPtr handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (handle == IntPtr.Zero)
         {
@@ -702,6 +707,11 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
     private void ApplyNativeWindowRegion()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
         IntPtr handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
         if (handle == IntPtr.Zero)
         {

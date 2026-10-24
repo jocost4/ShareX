@@ -93,14 +93,25 @@ namespace ShareX.HelpersLib
 
                 try
                 {
-                    PipeSecurity pipeSecurity = new PipeSecurity();
+                    NamedPipeServerStream namedPipeServer;
 
-                    using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                    if (OperatingSystem.IsWindows())
                     {
-                        pipeSecurity.AddAccessRule(new PipeAccessRule(identity.User, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+                        PipeSecurity pipeSecurity = new PipeSecurity();
+
+                        using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                        {
+                            pipeSecurity.AddAccessRule(new PipeAccessRule(identity.User, PipeAccessRights.ReadWrite, AccessControlType.Allow));
+                        }
+
+                        namedPipeServer = NamedPipeServerStreamAcl.Create(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, pipeSecurity);
+                    }
+                    else
+                    {
+                        namedPipeServer = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
                     }
 
-                    using (NamedPipeServerStream namedPipeServer = NamedPipeServerStreamAcl.Create(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, pipeSecurity))
+                    using (namedPipeServer)
                     {
                         namedPipeServerCreated = true;
 

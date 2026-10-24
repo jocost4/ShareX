@@ -137,8 +137,8 @@ internal static class Program
 
         await ApplicationSettingsRuntime.InitializeAsync(hotkeyHost);
 
-        bool showMainWindow = !(StartupOptions.SilentRun || ApplicationState.Settings.SilentRun) ||
-            !ApplicationState.Settings.ShowTray;
+        bool showMainWindow = !ApplicationCommandLine.HasCommands &&
+            (!(StartupOptions.SilentRun || ApplicationState.Settings.SilentRun) || !ApplicationState.Settings.ShowTray);
         MainWindowIntegration.Initialize(hotkeyHost.TrayIconService, showMainWindow);
         SingleInstanceCommandRouter.MarkReady();
 

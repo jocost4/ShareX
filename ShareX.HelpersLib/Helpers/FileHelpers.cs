@@ -334,11 +334,27 @@ namespace ShareX.HelpersLib
             {
                 try
                 {
-                    NativeMethods.OpenFolderAndSelectFile(filePath);
+                    if (OperatingSystem.IsWindows())
+                    {
+                        NativeMethods.OpenFolderAndSelectFile(filePath);
+                        DebugHelper.WriteLine("Folder opened with file: " + filePath);
+                        return true;
+                    }
+                    else if (OperatingSystem.IsLinux())
+                    {
+                        if (OpenFolderWithFileLinux(filePath))
+                        {
+                            DebugHelper.WriteLine("Folder opened with file (Linux): " + filePath);
+                            return true;
+                        }
+                    }
 
-                    DebugHelper.WriteLine("Folder opened with file: " + filePath);
-
-                    return true;
+                    // Fallback para outros sistemas ou se D-Bus falhar
+                    string dir = Path.GetDirectoryName(filePath);
+                    if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    {
+                        return OpenFolder(dir, false);
+                    }
                 }
                 catch (Exception e)
                 {
@@ -350,6 +366,39 @@ namespace ShareX.HelpersLib
                 MessageBox.Show(Localization.Strings.Helpers_OpenFile_File_not_exist_ + Environment.NewLine + filePath, "ShareX",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+
+            return false;
+        }
+
+        private static bool OpenFolderWithFileLinux(string filePath)
+        {
+            try
+            {
+                string uri = new Uri(filePath).AbsoluteUri;
+                using Process proc = new Process();
+                proc.StartInfo = new ProcessStartInfo("gdbus",
+                    $"call --session --dest org.freedesktop.FileManager1 --object-path /org/freedesktop/FileManager1 --method org.freedesktop.FileManager1.ShowItems \"['{uri}']\" \"\"")
+                {
+                    CreateNoWindow = true,
+                    UseShellExecute = false
+                };
+                if (proc.Start() && proc.WaitForExit(1500) && proc.ExitCode == 0)
+                {
+                    return true;
+                }
+            }
+            catch { }
+
+            try
+            {
+                string dir = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                {
+                    using Process proc = Process.Start(new ProcessStartInfo("xdg-open", dir) { UseShellExecute = true });
+                    return proc != null;
+                }
+            }
+            catch { }
 
             return false;
         }
@@ -758,6 +807,37 @@ namespace ShareX.HelpersLib
         {
             HashSet<string> allowedExtensions = new HashSet<string>(extensions, StringComparer.OrdinalIgnoreCase);
             return directoryInfo.EnumerateFiles().Where(f => allowedExtensions.Contains(f.Extension)).Select(x => x.FullName);
+        }
+
+        public static string FindExecutable(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return null;
+
+            if (File.Exists(fileName))
+            {
+                return Path.GetFullPath(fileName);
+            }
+
+            string pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (!string.IsNullOrEmpty(pathEnv))
+            {
+                foreach (string dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    try
+                    {
+                        string fullPath = Path.Combine(dir, fileName);
+                        if (File.Exists(fullPath))
+                        {
+                            return fullPath;
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+
+            return null;
         }
     }
 }
