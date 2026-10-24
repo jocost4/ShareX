@@ -8,6 +8,7 @@ on:
       - "!linux*"
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+      - "!*-linux*"
     paths-ignore:
       - "**/*.md"
       - "**/*.gitignore"
