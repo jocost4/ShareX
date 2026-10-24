@@ -1,0 +1,44 @@
+app-id: io.github.jocost4.ShareX
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.dotnet10
+command: ShareX
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --share=network
+  - --device=dri
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-download
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-documents
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.Screenshot
+  - --talk-name=org.freedesktop.portal.ScreenCast
+  - --talk-name=org.freedesktop.portal.Notifications
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-*
+
+build-options:
+  append-path: /usr/lib/sdk/dotnet10/bin
+  env:
+    DOTNET_ROOT: /usr/lib/sdk/dotnet10
+
+modules:
+  - name: sharex
+    buildsystem: simple
+    build-commands:
+      - dotnet publish ShareX/ShareX.csproj -c Release -r linux-x64 --self-contained true -o /app/lib/ShareX
+      - install -d /app/bin
+      - ln -s /app/lib/ShareX/ShareX /app/bin/ShareX
+      - install -Dm644 packaging/flatpak/io.github.jocost4.ShareX.desktop /app/share/applications/io.github.jocost4.ShareX.desktop
+      - install -Dm644 packaging/flatpak/io.github.jocost4.ShareX.metainfo.xml /app/share/metainfo/io.github.jocost4.ShareX.metainfo.xml
+      - install -Dm644 packaging/flatpak/io.github.jocost4.ShareX.png /app/share/icons/hicolor/256x256/apps/io.github.jocost4.ShareX.png
+    sources:
+      - type: dir
+        path: ../../

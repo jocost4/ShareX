@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.jocost4.ShareX</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>ShareX</name>
+  <summary>Screen capture, file sharing and productivity tool</summary>
+  
+  <developer id="io.github.jocost4">
+    <name>ShareX Team &amp; jocost4</name>
+  </developer>
+
+  <description>
+    <p>
+      ShareX is a free and open source program that lets you capture or record any area of your screen and share it with a single press of a key. It also allows uploading images, text or other types of files to many supported destinations.
+    </p>
+    <p>Key features include:</p>
+    <ul>
+      <li>Various capture methods including full screen, window, region, and screen recording</li>
+      <li>Advanced image editor and annotator with arrows, shapes, blur, text, and speech balloons</li>
+      <li>Over 80 different image, text, and file hosting destinations</li>
+      <li>Custom uploader support and URL shorteners</li>
+      <li>Productivity tools: color picker, screen color picker, ruler, image splitter, and QR code generator/decoder</li>
+      <li>Native Linux desktop integration supporting Wayland and X11 through modern desktop portals and Avalonia UI</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.jocost4.ShareX.desktop</launchable>
+
+  <url type="homepage">https://getsharex.com</url>
+  <url type="bugtracker">https://github.com/jocost4/ShareX/issues</url>
+  <url type="vcs-browser">https://github.com/jocost4/ShareX</url>
+  <url type="donation">https://getsharex.com/donate</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://getsharex.com/img/ShareX_Screenshot.png</image>
+      <caption>Main window of ShareX</caption>
+    </screenshot>
+  </screenshots>
+
+  <categories>
+    <category>Utility</category>
+    <category>Graphics</category>
+    <category>AudioVideo</category>
+    <category>RasterGraphics</category>
+  </categories>
+
+  <provides>
+    <binary>ShareX</binary>
+  </provides>
+
+  <releases>
+    <release version="22.0.0" date="2026-10-23">
+      <description>
+        <p>Comprehensive Linux port powered by Avalonia UI and .NET 10:</p>
+        <ul>
+          <li>Support for Wayland and X11 desktop environments</li>
+          <li>XDG Desktop Portal integration for screen capture</li>
+          <li>StatusNotifierItem support for system tray integration</li>
+          <li>Native packaging: Flatpak and Debian packages</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <content_rating type="oars-1.1" />
+</component>
