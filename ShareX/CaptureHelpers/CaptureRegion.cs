@@ -60,6 +60,12 @@ namespace ShareX
                 ? screenshot.CaptureActiveMonitor()
                 : screenshot.CaptureFullscreen())
             {
+                if (canvas == null)
+                {
+                    DebugHelper.WriteLine("CaptureRegion: Failed to capture screen (canvas is null).");
+                    return null;
+                }
+
                 frozenScreenshot = canvas.Copy();
             }
 

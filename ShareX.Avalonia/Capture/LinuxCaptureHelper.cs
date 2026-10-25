@@ -26,19 +26,7 @@ public static class LinuxCaptureHelper
         lock (_syncLock)
         {
             string? filePath = CaptureViaPortal(interactive: false);
-            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
-            {
-                try
-                {
-                    using FileStream stream = File.OpenRead(filePath);
-                    return SKBitmap.Decode(stream);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Failed to load portal screenshot: {ex}");
-                }
-            }
-            return null;
+            return LoadBitmapWithRetry(filePath);
         }
     }
 
@@ -47,20 +35,45 @@ public static class LinuxCaptureHelper
         lock (_syncLock)
         {
             string? filePath = CaptureViaPortal(interactive: true);
-            if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
-            {
-                try
-                {
-                    using FileStream stream = File.OpenRead(filePath);
-                    return SKBitmap.Decode(stream);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Failed to load interactive portal screenshot: {ex}");
-                }
-            }
+            return LoadBitmapWithRetry(filePath);
+        }
+    }
+
+    private static SKBitmap? LoadBitmapWithRetry(string? filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
+        {
             return null;
         }
+
+        for (int i = 0; i < 25; i++)
+        {
+            try
+            {
+                FileInfo fi = new FileInfo(filePath);
+                if (fi.Exists && fi.Length > 0)
+                {
+                    using FileStream stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    SKBitmap? bmp = SKBitmap.Decode(stream);
+                    if (bmp != null)
+                    {
+                        return bmp;
+                    }
+                }
+            }
+            catch (IOException)
+            {
+                // File locked during portal write
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Waiting for portal screenshot file to decode: {ex.Message}");
+            }
+
+            Thread.Sleep(100);
+        }
+
+        return null;
     }
 
     public static SKBitmap? CaptureRectangle(Rectangle rect)
@@ -223,7 +236,7 @@ public static class LinuxCaptureHelper
                 caller.WaitForExit(5000);
             }
 
-            int timeoutMs = interactive ? 60000 : 3000;
+            int timeoutMs = interactive ? 60000 : 8000;
             waitHandle.WaitOne(timeoutMs);
 
             foreach (var w in watchers)
